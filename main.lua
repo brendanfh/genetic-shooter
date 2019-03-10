@@ -10,7 +10,7 @@ local world, player
 local input
 function love.load()
 	world, player = World:new()
-	for i = 1, 10 do
+	for i = 1, 100 do
 		local enemy = Enemy:new(math.random(800), math.random(600))
 		world:add_entity(enemy)
 	end
@@ -38,4 +38,7 @@ end
 
 function love.draw()
 	world:draw()
+
+	love.graphics.setColor(0, 0, 0)
+	love.graphics.printf(tostring(love.timer.getFPS()) .. " FPS", 0, 0, 800, "center")
 end

@@ -152,7 +152,7 @@ function Player:get_distances(world)
 		local dy = math.sin(a) * CONF.ENEMY_SIZE
 
 		local hit_entity = false
-		for j = 0, CONF.PLAYER_VISION_DISTANCE - 1 do
+		for j = 1, CONF.PLAYER_VISION_DISTANCE do
 			local tx = self.x + dx * j
 			local ty = self.y + dy * j
 
@@ -160,15 +160,17 @@ function Player:get_distances(world)
 				if e.ENTITY_TYPE == "Enemy" and math.rectcontains(e:get_rect(), tx, ty) then
 					local ent_rect = e:get_rect()
 
-					for k = 0, 4 do
+					local toggle = false
+					for k = 0, 20 do
 						dx = dx / 2
 						dy = dy / 2
 						tx = tx - dx
 						ty = ty - dy
 
-						if not math.rectcontains(ent_rect, tx, ty) then
+						if math.rectcontains(ent_rect, tx, ty) == toggle then
 							dx = dx * -1
 							dy = dy * -1
+							toggle = not toggle
 						end
 					end
 

@@ -46,7 +46,7 @@ local PLAYER_COLOR = { 0.3, 0.3, 0.7 }
 local ENEMY_COLOR = { 1, 0, 0 }
 local BULLET_COLOR = { 0.6, 0.6, 1.0 }
 
-local PLAYER_VISION_SEGMENTS = 32
+local PLAYER_VISION_SEGMENTS = 16
 local PLAYER_VISION_DISTANCE = 20
 
 local ENEMY_SIZE = 20
