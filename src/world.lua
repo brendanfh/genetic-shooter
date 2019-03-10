@@ -83,6 +83,8 @@ function Player:new()
 		y = CONF.WINDOW_HEIGHT / 2;
 		r = 20;
 		fire_cooldown = 0;
+
+		distances = {};
 	}
 	
 	setmetatable(o, Player_mt)
@@ -125,6 +127,8 @@ function Player:update(dt, world, input)
 	else
 		self.fire_cooldown = self.fire_cooldown - 1
 	end
+
+	self.distances = self:get_distances(world)
 end
 
 function Player:fire(vx, vy, world)
@@ -139,9 +143,71 @@ end
 function Player:collide(other, dx, dy, world)
 end
 
+function Player:get_distances(world)
+	local ret = {}
+
+	for i = 0, CONF.PLAYER_VISION_SEGMENTS - 1 do
+		local a = i * 2 * math.pi / CONF.PLAYER_VISION_SEGMENTS
+		local dx = math.cos(a) * CONF.ENEMY_SIZE
+		local dy = math.sin(a) * CONF.ENEMY_SIZE
+
+		local hit_entity = false
+		for j = 0, CONF.PLAYER_VISION_DISTANCE - 1 do
+			local tx = self.x + dx * j
+			local ty = self.y + dy * j
+
+			for _, e in ipairs(world.entities) do
+				if e.ENTITY_TYPE == "Enemy" and math.rectcontains(e:get_rect(), tx, ty) then
+					local ent_rect = e:get_rect()
+
+					for k = 0, 4 do
+						dx = dx / 2
+						dy = dy / 2
+						tx = tx - dx
+						ty = ty - dy
+
+						if not math.rectcontains(ent_rect, tx, ty) then
+							dx = dx * -1
+							dy = dy * -1
+						end
+					end
+
+					table.insert(ret, math.sqrt(math.sqrDist(self.x, self.y, tx, ty)))
+					hit_entity = true
+					break
+				end
+			end
+		end
+
+		if not hit_entity then
+			table.insert(ret, 0)
+		end
+	end
+
+	return ret
+end
+
 function Player:draw()
 	love.graphics.setColor(CONF.PLAYER_COLOR)
 	love.graphics.circle("fill", self.x, self.y, self.r)
+
+	love.graphics.setColor(0, 0, 0)
+	for i = 0, CONF.PLAYER_VISION_SEGMENTS - 1 do
+		local a = i * 2 * math.pi / CONF.PLAYER_VISION_SEGMENTS
+		local dx = math.cos(a)
+		local dy = math.sin(a)
+
+		love.graphics.line(
+			self.x, self.y,
+			self.x + dx * CONF.PLAYER_VISION_DISTANCE * CONF.ENEMY_SIZE,
+			self.y + dy * CONF.PLAYER_VISION_DISTANCE * CONF.ENEMY_SIZE
+		)
+
+		if self.distances[i + 1] > 0 then
+			local d = self.distances[i + 1]
+			love.graphics.circle("fill", self.x + dx * d, self.y + dy * d, 5)
+		end
+	end
 end
 
 -- ENEMY --
@@ -154,7 +220,7 @@ function Enemy:new(x, y)
 	local o = {
 		x = x;
 		y = y;
-		size = 20;
+		size = CONF.ENEMY_SIZE
 	}
 
 	setmetatable(o, Enemy_mt)

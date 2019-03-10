@@ -13,6 +13,10 @@ function math.genuuid()
     end)
 end
 
+function math.rectcontains(r, x, y)
+	return r[1] <= x and r[2] <= y and r[1] + r[3] >= x and r[2] + r[4] >= y
+end
+
 function math.rectintersects(r1, r2)
 	return r1[1] <= r2[1] + r2[3] and r1[2] <= r2[2] + r2[4] and r1[1] + r1[3] >= r2[1] and r1[2] + r1[4] >= r2[2]
 end

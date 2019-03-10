@@ -32,7 +32,7 @@ function love.update(dt)
 	if love.keyboard.isDown "escape" then
 		love.event.quit()
 	end
-	
+
 	world:update(dt, input)
 end
 
