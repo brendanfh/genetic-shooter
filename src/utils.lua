@@ -13,6 +13,10 @@ function math.genuuid()
     end)
 end
 
+function math.rectintersects(r1, r2)
+	return r1[1] <= r2[1] + r2[3] and r1[2] <= r2[2] + r2[4] and r1[1] + r1[3] >= r2[1] and r1[2] + r1[4] >= r2[2]
+end
+
 local function ripairsiter(t, i)
 	i = i - 1
 	if i ~= 0 then

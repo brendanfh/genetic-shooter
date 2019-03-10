@@ -6,13 +6,15 @@ local CONF = require "conf"
 
 local Bullet = {}
 local Bullet_mt = { __index = Bullet }
+Bullet.ENTITY_TYPE = "Bullet"
+
 function Bullet:new(x, y, vx, vy)
 	local o = {
 		x = x;
 		y = y;
 		vx = vx;
 		vy = vy;
-		life = 100;
+		life = 80;
 		alive = true;
 	}
 	
@@ -20,14 +22,25 @@ function Bullet:new(x, y, vx, vy)
 	return o
 end
 
-function Bullet:update(dt)
-	self.x = self.x + self.vx * dt
-	self.y = self.y + self.vy * dt
+function Bullet:update(dt, world)
+	world:move_entity(self, self.vx * dt, self.vy * dt)
 
 	self.life = self.life - 1
 	if self.life <= 0 then
-		self.alive = false
+		world:remove_entity(self)
 	end
+end
+
+function Bullet:collide(other, dx, dy, world)
+	if other.ENTITY_TYPE == "Enemy" then
+		world:remove_entity(other)
+		world:remove_entity(self)
+	end
+end
+
+function Bullet:get_rect()
+	local R = 8 * .7
+	return { self.x - R, self.y - R, R * 2, R * 2 }
 end
 
 function Bullet:draw()
@@ -62,11 +75,13 @@ end
 
 local Player = {}
 local Player_mt = { __index = Player }
+Player.ENTITY_TYPE = "Player"
+
 function Player:new()
 	local o = {
-		x = 0;
-		y = 0;
-		r = 16;
+		x = CONF.WINDOW_WIDTH / 2;
+		y = CONF.WINDOW_HEIGHT / 2;
+		r = 20;
 		fire_cooldown = 0;
 	}
 	
@@ -85,11 +100,9 @@ function Player:update(dt, world, input)
 	if input.move_left  then dx = dx - SPEED end
 	if input.move_right then dx = dx + SPEED end
 
-	self.x = self.x + dx * dt
-	self.y = self.y + dy * dt
+	world:move_entity(self, dx * dt, dy * dt)
 
 	if self.fire_cooldown <= 0 then
-		self.fire_cooldown = 10
 		local firex = 0
 		local firey = 0
 
@@ -101,6 +114,8 @@ function Player:update(dt, world, input)
 		if input.fire_right then firex = firex + 1 end
 
 		if firex ~= 0 or firey ~= 0 then
+			self.fire_cooldown = 6
+
 			local d = math.sqrt(math.sqrDist(0, 0, firex, firey))
 			firex = FIRE_SPEED * firex / d
 			firey = FIRE_SPEED * firey / d
@@ -117,9 +132,60 @@ function Player:fire(vx, vy, world)
 	world:add_entity(bullet)	
 end
 
+function Player:get_rect()
+	return { self.x - self.r, self.y - self.r, self.r * 2, self.r * 2 }
+end
+
+function Player:collide(other, dx, dy, world)
+end
+
 function Player:draw()
 	love.graphics.setColor(CONF.PLAYER_COLOR)
 	love.graphics.circle("fill", self.x, self.y, self.r)
+end
+
+-- ENEMY --
+
+local Enemy = {}
+local Enemy_mt = { __index = Enemy }
+Enemy.ENTITY_TYPE = "Enemy"
+
+function Enemy:new(x, y)
+	local o = {
+		x = x;
+		y = y;
+		size = 20;
+	}
+
+	setmetatable(o, Enemy_mt)
+	return o
+end
+
+function Enemy:update(dt, world)
+	local player = world.player
+	
+	local a = math.atan2(player.y - self.y, player.x - self.x)
+	local dx = math.cos(a)
+	local dy = math.sin(a)
+
+	local SPEED = 80
+	world:move_entity(self, dx * dt * SPEED, dy * dt * SPEED)
+end
+
+function Enemy:get_rect()
+	return { self.x - self.size, self.y - self.size, self.size * 2, self.size * 2 }
+end
+
+function Enemy:collide(other, dx, dy, world)
+	if other.ENTITY_TYPE == "Enemy" then
+		self.x = self.x - dx
+		self.y = self.y - dy
+	end
+end
+
+function Enemy:draw()
+	love.graphics.setColor(CONF.ENEMY_COLOR)
+	love.graphics.rectangle("fill", unpack(self:get_rect()))
 end
 
 -- WORLD --
@@ -182,6 +248,27 @@ function World:remove_entity(ent_or_id)
 	table.remove(self.entities, pos)
 end
 
+-- Assumes ent has x and y
+function World:move_entity(ent, dx, dy)
+	ent.x = ent.x + dx
+	for _, e in ipairs(self.entities) do
+		if e.id ~= ent.id then
+			if math.rectintersects(e:get_rect(), ent:get_rect()) then
+				ent:collide(e, dx, 0, self)
+			end
+		end
+	end
+
+	ent.y = ent.y + dy
+	for _, e in ipairs(self.entities) do
+		if e.id ~= ent.id then
+			if math.rectintersects(e:get_rect(), ent:get_rect()) then
+				ent:collide(e, 0, dy, self)
+			end
+		end
+	end
+end
+
 function World:draw()
 	for _, e in ipairs(self.entities) do
 		e:draw()
@@ -193,5 +280,6 @@ end
 return {
 	World = World;
 	Player = Player;
+	Enemy = Enemy;
 	Bullet = Bullet;
 }

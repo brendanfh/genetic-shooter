@@ -1,9 +1,12 @@
+-- Window will be small since the graphics are not very important
+local WINDOW_WIDTH = 800
+local WINDOW_HEIGHT = 600
+
 function love.conf(t)
 	t.window.title = "Maching Learning Game"
 
-	-- Window will be small since the graphics are not very important
-	t.window.width = 640
-	t.window.height = 480
+	t.window.width = WINDOW_WIDTH
+	t.window.height = WINDOW_HEIGHT
 
 	t.window.vsync = true
 
@@ -44,6 +47,8 @@ local ENEMY_COLOR = { 1, 0, 0 }
 local BULLET_COLOR = { 0.6, 0.6, 1.0 }
 
 return {
+	WINDOW_WIDTH = WINDOW_WIDTH;
+	WINDOW_HEIGHT = WINDOW_HEIGHT;
 	KEYS = KEYMAP;
 
 	BACK_COLOR = BACK_COLOR;

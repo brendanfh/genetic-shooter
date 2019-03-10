@@ -4,11 +4,16 @@ local world_mod = require "src.world"
 local Input = require "src.input"
 
 local World = world_mod.World
+local Enemy = world_mod.Enemy
 
 local world, player
 local input
 function love.load()
 	world, player = World:new()
+	for i = 1, 10 do
+		local enemy = Enemy:new(math.random(800), math.random(600))
+		world:add_entity(enemy)
+	end
 
 	input = Input:new()
 
