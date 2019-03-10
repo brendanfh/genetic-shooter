@@ -26,3 +26,28 @@ function love.conf(t)
     t.modules.video = false
     t.modules.window = true
 end
+
+local KEYMAP = {
+	MOVE_UP    = "w";
+	MOVE_DOWN  = "s";
+	MOVE_LEFT  = "a";
+	MOVE_RIGHT = "d";
+	FIRE_UP    = "up";
+	FIRE_DOWN  = "down";
+	FIRE_LEFT  = "left";
+	FIRE_RIGHT = "right";
+}
+
+local BACK_COLOR = { 0.8, 0.8, 0.8 }
+local PLAYER_COLOR = { 0.3, 0.3, 0.7 }
+local ENEMY_COLOR = { 1, 0, 0 }
+local BULLET_COLOR = { 0.6, 0.6, 1.0 }
+
+return {
+	KEYS = KEYMAP;
+
+	BACK_COLOR = BACK_COLOR;
+	PLAYER_COLOR = PLAYER_COLOR;
+	ENEMY_COLOR = ENEMY_COLOR;
+	BULLET_COLOR = BULLET_COLOR;
+}
