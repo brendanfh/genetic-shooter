@@ -9,9 +9,9 @@ local Enemy = world_mod.Enemy
 local world, player
 local input
 function love.load()
-	world, player = World:new()
-	for i = 1, 100 do
-		local enemy = Enemy:new(math.random(800), math.random(600))
+	world, player = World.new()
+	for _ = 1, 100 do
+		local enemy = Enemy.new(math.random(800), math.random(600))
 		world:add_entity(enemy)
 	end
 
@@ -21,7 +21,7 @@ function love.load()
 end
 
 function love.keypressed(key)
-	input:keydown(key)	
+	input:keydown(key)
 end
 
 function love.keyreleased(key)

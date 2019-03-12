@@ -4,7 +4,7 @@ local KEYS = CONF.KEYS
 -- INPUT --
 
 local Input = {}
-function Input:new()
+function Input.new()
 	local o = {
 		move_up    = false;
 		move_down  = false;
@@ -24,7 +24,7 @@ end
 
 -- Ugly way of righting it but I don't care (right now at least... :P)
 function Input:keydown(key)
-	if     key == KEYS.MOVE_UP    then self.move_up    = true 
+	if     key == KEYS.MOVE_UP    then self.move_up    = true
 	elseif key == KEYS.MOVE_DOWN  then self.move_down  = true
 	elseif key == KEYS.MOVE_LEFT  then self.move_left  = true
 	elseif key == KEYS.MOVE_RIGHT then self.move_right = true
@@ -36,7 +36,7 @@ function Input:keydown(key)
 end
 
 function Input:keyup(key)
-	if     key == KEYS.MOVE_UP    then self.move_up    = false 
+	if     key == KEYS.MOVE_UP    then self.move_up    = false
 	elseif key == KEYS.MOVE_DOWN  then self.move_down  = false
 	elseif key == KEYS.MOVE_LEFT  then self.move_left  = false
 	elseif key == KEYS.MOVE_RIGHT then self.move_right = false

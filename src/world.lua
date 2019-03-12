@@ -8,7 +8,7 @@ local Bullet = {}
 local Bullet_mt = { __index = Bullet }
 Bullet.ENTITY_TYPE = "Bullet"
 
-function Bullet:new(x, y, vx, vy)
+function Bullet.new(x, y, vx, vy)
 	local o = {
 		x = x;
 		y = y;
@@ -17,7 +17,7 @@ function Bullet:new(x, y, vx, vy)
 		life = 80;
 		alive = true;
 	}
-	
+
 	setmetatable(o, Bullet_mt)
 	return o
 end
@@ -77,7 +77,7 @@ local Player = {}
 local Player_mt = { __index = Player }
 Player.ENTITY_TYPE = "Player"
 
-function Player:new()
+function Player.new()
 	local o = {
 		x = CONF.WINDOW_WIDTH / 2;
 		y = CONF.WINDOW_HEIGHT / 2;
@@ -86,7 +86,7 @@ function Player:new()
 
 		distances = {};
 	}
-	
+
 	setmetatable(o, Player_mt)
 	return o
 end
@@ -109,7 +109,7 @@ function Player:update(dt, world, input)
 		local firey = 0
 
 		local FIRE_SPEED = 300
-		
+
 		if input.fire_up    then firey = firey - 1 end
 		if input.fire_down  then firey = firey + 1 end
 		if input.fire_left  then firex = firex - 1 end
@@ -132,8 +132,8 @@ function Player:update(dt, world, input)
 end
 
 function Player:fire(vx, vy, world)
-	local bullet = Bullet:new(self.x, self.y, vx, vy)
-	world:add_entity(bullet)	
+	local bullet = Bullet.new(self.x, self.y, vx, vy)
+	world:add_entity(bullet)
 end
 
 function Player:get_rect()
@@ -153,6 +153,8 @@ function Player:get_distances(world)
 
 		local hit_entity = false
 		for j = 1, CONF.PLAYER_VISION_DISTANCE do
+			if hit_entity then break end
+
 			local tx = self.x + dx * j
 			local ty = self.y + dy * j
 
@@ -161,7 +163,7 @@ function Player:get_distances(world)
 					local ent_rect = e:get_rect()
 
 					local toggle = false
-					for k = 0, 20 do
+					for _ = 0, 20 do
 						dx = dx / 2
 						dy = dy / 2
 						tx = tx - dx
@@ -218,7 +220,7 @@ local Enemy = {}
 local Enemy_mt = { __index = Enemy }
 Enemy.ENTITY_TYPE = "Enemy"
 
-function Enemy:new(x, y)
+function Enemy.new(x, y)
 	local o = {
 		x = x;
 		y = y;
@@ -231,7 +233,7 @@ end
 
 function Enemy:update(dt, world)
 	local player = world.player
-	
+
 	local a = math.atan2(player.y - self.y, player.x - self.x)
 	local dx = math.cos(a)
 	local dy = math.sin(a)
@@ -260,9 +262,9 @@ end
 
 local World = {}
 local World_mt = { __index = World }
-function World:new(player)
+function World.new(player)
 	if player == nil then
-		player = Player:new()
+		player = Player.new()
 	end
 
 	local o = {
@@ -312,11 +314,11 @@ function World:remove_entity(ent_or_id)
 			break
 		end
 	end
-	
+
 	table.remove(self.entities, pos)
 end
 
--- Assumes ent has x and y
+-- Assumes ent has x, y and get_rect
 function World:move_entity(ent, dx, dy)
 	ent.x = ent.x + dx
 	for _, e in ipairs(self.entities) do

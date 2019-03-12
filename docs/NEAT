@@ -1,0 +1,45 @@
+------------ Document to help me understand how NEAT works --------------
+
+The word neuron and node can be used interchangibly here.
+
+A genome describes a phenotype (in our case a neural network)
+A gene in the genome correspondes to a weight in the neural network
+The genome starts as simply the input nodes and the output nodes
+	- New nodes are added through mutation
+
+Mutation can be:
+	- Changing the genes (changing the weights)
+	- Adding a gene (adding a connection)
+	- Splitting a gene into two, creating a new node in the process
+	
+
+
+The basic process is:
+	1. Create an empty list of species (list of genomes)
+	1.5 Populate the list with the number of species
+	2. Mutate each member of the of the species a little bit
+	3. Run the trials
+	4. Remove the lowest performing members, say bottom 50%
+	6. Use breeding to combine the remaining members of the species into more members
+		(each step of this is called a generation)
+	7. Go to step 2
+
+So I guess I'm not using speciation....
+	That's okay for now
+
+
+
+
+
+
+
+In case I need it
+
+The compatibility formula is
+	delta = c1 * E / N + c2 * D / N + c3 * W
+
+	c1, c2, c3 are coefficients used to adjust the importance of the factors
+	N is number of genes in the larger genome
+	E is the number of excess genes
+	D is the number of disjoint genes
+
