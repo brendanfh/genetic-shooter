@@ -33,6 +33,7 @@ end
 
 function Bullet:collide(other, dx, dy, world)
 	if other.ENTITY_TYPE == "Enemy" then
+		other.alive = false
 		world:remove_entity(other)
 		world:remove_entity(self)
 	end
@@ -82,6 +83,7 @@ function Player.new()
 		x = CONF.WINDOW_WIDTH / 2;
 		y = CONF.WINDOW_HEIGHT / 2;
 		r = 20;
+		alive = true;
 		fire_cooldown = 0;
 
 		distances = {};
@@ -141,6 +143,10 @@ function Player:get_rect()
 end
 
 function Player:collide(other, dx, dy, world)
+	if other.ENTITY_TYPE == "Wall" then
+		self.x = self.x - dx
+		self.y = self.y - dy
+	end
 end
 
 function Player:get_distances(world)
@@ -188,6 +194,8 @@ function Player:get_distances(world)
 		end
 	end
 
+	assert(#ret == 16, "RET NOT LONG ENOUGH")
+
 	return ret
 end
 
@@ -224,7 +232,8 @@ function Enemy.new(x, y)
 	local o = {
 		x = x;
 		y = y;
-		size = CONF.ENEMY_SIZE
+		size = CONF.ENEMY_SIZE;
+		alive = true;
 	}
 
 	setmetatable(o, Enemy_mt)
@@ -251,12 +260,50 @@ function Enemy:collide(other, dx, dy, world)
 		self.x = self.x - dx
 		self.y = self.y - dy
 	end
+
+	if other.ENTITY_TYPE == "Player" then
+		other.alive = false
+		world:remove_entity(self)
+	end
 end
 
 function Enemy:draw()
 	love.graphics.setColor(CONF.ENEMY_COLOR)
 	love.graphics.rectangle("fill", unpack(self:get_rect()))
 end
+
+
+-- Wall class --
+
+local Wall = {}
+local Wall_mt = { __index = Wall }
+Wall.ENTITY_TYPE = "Wall"
+
+function Wall.new(x, y, w, h)
+	local o = {
+		x = x;
+		y = y;
+		w = w;
+		h = h;
+	}
+
+	setmetatable(o, Wall_mt)
+	return o
+end
+
+function Wall:update(dt)
+end
+
+function Wall:draw()
+end
+
+function Wall:get_rect()
+	return { self.x, self.y, self.w, self.h }
+end
+
+function Wall:collide(other, dx, dy, world)
+end
+
 
 -- WORLD --
 
@@ -315,12 +362,17 @@ function World:remove_entity(ent_or_id)
 		end
 	end
 
+	if pos == 0 then return end
+
 	table.remove(self.entities, pos)
 end
 
 -- Assumes ent has x, y and get_rect
 function World:move_entity(ent, dx, dy)
 	ent.x = ent.x + dx
+	if math.rectintersects(self.player:get_rect(), ent:get_rect()) then
+		ent:collide(self.player, dx, 0, self)
+	end
 	for _, e in ipairs(self.entities) do
 		if e.id ~= ent.id then
 			if math.rectintersects(e:get_rect(), ent:get_rect()) then
@@ -330,6 +382,9 @@ function World:move_entity(ent, dx, dy)
 	end
 
 	ent.y = ent.y + dy
+	if math.rectintersects(self.player:get_rect(), ent:get_rect()) then
+		ent:collide(self.player, dx, 0, self)
+	end
 	for _, e in ipairs(self.entities) do
 		if e.id ~= ent.id then
 			if math.rectintersects(e:get_rect(), ent:get_rect()) then
@@ -352,4 +407,5 @@ return {
 	Player = Player;
 	Enemy = Enemy;
 	Bullet = Bullet;
+	Wall = Wall;
 }

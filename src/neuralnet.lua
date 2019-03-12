@@ -42,7 +42,8 @@ function NeuralNetwork:add_connection(from, to, weight, id)
 	local neurons = self.neurons
 
 	if type(from) == "table" then
-		table.insert(neurons[to].inputs, from)
+		assert(from.to ~= from.from, "NEURON GOING TO ITSELF")
+		table.insert(neurons[from.to].inputs, from)
 	else
 		table.insert(neurons[to].inputs, {
 			to = to;
@@ -75,15 +76,18 @@ function NeuralNetwork:activate(inputs)
 	local ns = self.neurons
 
 	for i = 1, self.num_inputs do
+		assert(inputs[i] ~= nil, "INPUT WAS NIL")
 		self.neurons[i].value = inputs[i]
 	end
 
-	for i = self.num_inputs + 1, #ns do
-		ns[i].dirty = true
+	for i, _ in pairs(ns) do
+		if i > self.num_inputs then
+			ns[i].dirty = true
+		end
 	end
 
 	-- Iterate backwards since the hidden nodes are going to be at the end of the array
-	for i = #ns, self.num_inputs + 1, -1 do
+	for i, _ in pairs(ns) do
 		if ns[i].dirty then
 			self:activate_neuron(i)
 		end
