@@ -1,11 +1,17 @@
+local conf = require "conf"
+local MAX_NEURONS = conf.MAX_NEURONS
+
 -- Simple neural network implementation (perceptron)
 
 local Neuron = {}
-function Neuron.new()
+function Neuron.new(x, y)
 	local o = {
 		value = 0;
 		inputs = {};
 		dirty = false; -- Means that the value of the neuron has to be recalculated
+
+		x = x;
+		y = y;
 	}
 	return o
 end
@@ -26,12 +32,12 @@ function NeuralNetwork.new(num_inputs, num_outputs)
 
 	-- 1 to num_inputs are input nodes
 	for i = 1, num_inputs do
-		o.neurons[i] = Neuron.new()
+		o.neurons[i] = Neuron.new(0, (i - 1) * 32)
 	end
 
 	-- num_inputs + 1 to num_inputs + num_outputs are output nodes
-	for i = num_inputs + 1, num_inputs + num_outputs do
-		o.neurons[i] = Neuron.new()
+	for i = 1, num_outputs do
+		o.neurons[MAX_NEURONS - i] = Neuron.new(600, (i - 1) * 32)
 	end
 
 	setmetatable(o, NeuralNetwork_mt)
@@ -55,7 +61,7 @@ function NeuralNetwork:add_connection(from, to, weight, id)
 end
 
 function NeuralNetwork:add_neuron()
-	self.neurons[self.next_neuron] = Neuron.new()
+	self.neurons[self.next_neuron] = Neuron.new(math.random(500) + 100, math.random(400) + 50)
 	self.next_neuron = self.next_neuron + 1
 	return self.next_neuron - 1
 end
@@ -65,7 +71,7 @@ function NeuralNetwork:create_neuron(num)
 		self.next_neuron = num + 1 -- Makes sure the next neuron won't override previous neurons
 	end
 
-	self.neurons[num] = Neuron.new()
+	self.neurons[num] = Neuron.new(math.random(400) + 100, math.random(400) + 50)
 end
 
 function NeuralNetwork:has_neuron(num)
@@ -122,7 +128,7 @@ function NeuralNetwork:get_outputs()
 	local ret = {}
 
 	for i = 1, self.num_outputs do
-		ret[i] = self.neurons[i + self.num_inputs].value
+		ret[i] = self.neurons[MAX_NEURONS - i].value
 	end
 
 	return ret

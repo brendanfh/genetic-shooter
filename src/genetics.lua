@@ -1,16 +1,19 @@
 local NN = require "src.neuralnet"
+local conf = require "conf"
 local NeuralNetwork = NN.NeuralNetwork
 
 -- Globals
 local Starting_Weights_Chance = 0.25
 local Starting_Connection_Chance = 2.0
-local Starting_Bias_Chance = 0.4
+local Starting_Bias_Chance = 0.2
 local Starting_Split_Chance = 0.5
 local Starting_Enable_Chance = 0.2
 local Starting_Disable_Chance = 0.4
 
 local Reset_Weight_Chance = 0.9
 local Crossover_Chance = 0.75
+
+local MAX_NEURONS = conf.MAX_NEURONS
 
 -- Need a global-ish innovation number, since that depends on the whole training, not just a single genome
 local Current_Innovation = 1
@@ -54,6 +57,7 @@ end
 
 -- Genome class --
 
+
 local Genome = {}
 local Genome_mt = { __index = Genome }
 
@@ -64,7 +68,7 @@ function Genome.new(inputs, outputs)
 		genes = {};
 		fitness = 0;
 		network = {}; -- Neural Network
-		high_neuron = inputs + outputs + 1; -- Highest numbered neuron in the genome
+		high_neuron = inputs + 1; -- Highest numbered neuron in the genome
 
 		mutations = { -- The different chances of mutating a particular part of the genome
 			["weights"] = Starting_Weights_Chance; -- Chance of changing the weights
@@ -81,6 +85,8 @@ function Genome.new(inputs, outputs)
 end
 
 function Genome:add_gene(from, to, weight)
+	if from > to then return end
+
 	local gene = Gene.new()
 	gene.weight = weight
 	gene.from = from
@@ -110,8 +116,6 @@ function Genome:create_network()
 
 	for i = 1, #self.genes do
 		local gene = self.genes[i]
-		print("----------------------")
-		print(gene.innovation, gene.from, gene.to, gene.weight)
 
 		if gene.enabled then
 			if not net:has_neuron(gene.to) then
@@ -133,8 +137,7 @@ function Genome:has_gene(from, to)
 	for i = 1, #self.genes do
 		local gene = self.genes[i]
 
-		if (gene.to == to and gene.from == from)
-			or (gene.to == from and gene.from == to) then
+		if gene.to == to and gene.from == from then
 			return true
 		end
 	end
@@ -171,8 +174,15 @@ function Genome:mutate_connections(connect_to_bias)
 		return
 	end
 
+	-- Must go to a bigger neuron
+	if neuron2 < neuron1 then
+		local tmp = neuron1
+		neuron1 = neuron2
+		neuron2 = tmp
+	end
+
 	-- Output cant be input
-	if (neuron1 > self.num_inputs and neuron1 <= self.num_inputs + self.num_outputs) then
+	if neuron1 >= MAX_NEURONS - self.num_outputs then
 		return
 	end
 
@@ -191,7 +201,6 @@ function Genome:mutate_connections(connect_to_bias)
 	end
 
 	local weight = math.random() * 4 - 2
-	assert(neuron1 ~= neuron2, "IN MUTATE CONNECTIONS")
 	self:add_gene(neuron1, neuron2, weight)
 end
 
@@ -214,22 +223,37 @@ function Genome:mutate_neuron()
 	-- Disable the gene beacause we are about to add other to replace it
 	gene.enabled = false
 
+	local n1 = gene.from
+	local n2 = self.high_neuron
+	local n3 = gene.to
+
+	local tmp
+	if n1 > n2 then
+		tmp = n1
+		n1 = n2
+		n2 = tmp
+	end
+
+	if n2 > n3 then
+		tmp = n3
+		n3 = n2
+		n2 = tmp
+	end
+
 	local gene1 = gene:copy()
-	gene1.from = self.high_neuron
+	gene1.from = n2
+	gene1.to = n3
 	gene1.weight = 1.0
 	gene1.innovation = Get_Next_Innovation()
 	gene1.enabled = true
 
-	assert(gene1.from ~= gene1.to, "IN MUTATE NEURON")
-
 	table.insert(self.genes, gene1)
 
 	local gene2 = gene:copy()
-	gene2.to = self.high_neuron
+	gene2.from = n1
+	gene2.to = n2
 	gene2.innovation = Get_Next_Innovation()
 	gene2.enabled = true
-
-	assert(gene2.from ~= gene2.to, "IN MUTATE NEURON")
 
 	table.insert(self.genes, gene2)
 end
@@ -284,15 +308,6 @@ function Genome:mutate()
 		prob = prob - 1
 	end
 
-	prob = self.mutations["split"]
-	while prob > 0 do
-		if math.random() < prob then
-			self:mutate_neuron()
-		end
-
-		prob = prob - 1
-	end
-
 	prob = self.mutations["enable"]
 	while prob > 0 do
 		if math.random() < prob then
@@ -306,6 +321,15 @@ function Genome:mutate()
 	while prob > 0 do
 		if math.random() < prob then
 			self:mutate_enabled(false)
+		end
+
+		prob = prob - 1
+	end
+
+	prob = self.mutations["split"]
+	while prob > 0 do
+		if math.random() < prob then
+			self:mutate_neuron()
 		end
 
 		prob = prob - 1
@@ -324,7 +348,7 @@ function Genome:get_random_neuron(can_be_input)
 	end
 
 	for o = 1, self.num_outputs do
-		neurons[o + self.num_inputs] = true
+		neurons[MAX_NEURONS - o] = true
 	end
 
 	for i = 1, #genes do
@@ -405,6 +429,7 @@ function Population.new()
 		generation = 0;
 		current_genome = 0;
 		high_fitness = 0;
+		total_fitness = 0;
 		avg_fitness = 0;
 	}
 
@@ -445,7 +470,7 @@ function Population:kill_worst()
 		return a.fitness > b.fitness
 	end)
 
-	local count = math.floor(3 * #self.genomes / 4)
+	local count = math.floor(2 * #self.genomes / 3)
 	for _ = 1, count do
 		table.remove(self.genomes) -- This removes the last (worst) genome
 	end
@@ -458,7 +483,7 @@ function Population:kill_worst()
 end
 
 function Population:mate()
-	local count = #self.genomes * 3
+	local count = #self.genomes * 2
 
 	-- Double the population size
 	for _ = 1, count do
@@ -474,7 +499,7 @@ function Population:evolve()
 
 	-- First we need to calculate the fitnesses of every genome
 	self.current_genome = 0
-	function evolve_test(inputs, output_func, ...)
+	function evolve_test(inputs, output_func, _, ...)
 		if self.current_genome == 0 then
 			self.current_genome = 1
 			self.genomes[self.current_genome]:create_network()
@@ -495,7 +520,15 @@ function Population:evolve()
 			if cont then
 				return evolve_test
 			else
+				if genome.fitness > self.high_fitness then
+					self.high_fitness = genome.fitness
+				end
+
+				self.total_fitness = self.total_fitness + genome.fitness
+				self.avg_fitness = self.total_fitness / self.current_genome
+
 				self.current_genome = self.current_genome + 1
+
 				if self.current_genome <= #self.genomes then
 					self.genomes[self.current_genome]:create_network()
 					return evolve_test
@@ -511,11 +544,16 @@ function Population:evolve()
 	-- Then we need to kill off the worst of them
 	-- Then we breed more
 	-- Rinse and repeat!
-	function finish_evolve()
+	function finish_evolve(_, _, generation_step, ...)
+		generation_step(self.avg_fitness, self.high_fitness, ...)
+
 		self:kill_worst()
 		self:mate()
 
 		self.current_genome = 0
+		self.high_fitness = 0
+		self.avg_fitness = 0
+		self.total_fitness = 0
 		return evolve_test
 	end
 

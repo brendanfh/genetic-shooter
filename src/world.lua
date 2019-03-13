@@ -40,7 +40,7 @@ function Bullet:collide(other, dx, dy, world)
 end
 
 function Bullet:get_rect()
-	local R = 8 * .7
+	local R = 8 * .5
 	return { self.x - R, self.y - R, R * 2, R * 2 }
 end
 
@@ -87,6 +87,7 @@ function Player.new()
 		fire_cooldown = 0;
 
 		distances = {};
+		shot = false;
 	}
 
 	setmetatable(o, Player_mt)
@@ -135,6 +136,7 @@ end
 
 function Player:fire(vx, vy, world)
 	local bullet = Bullet.new(self.x, self.y, vx, vy)
+	self.shot = true
 	world:add_entity(bullet)
 end
 
@@ -190,11 +192,9 @@ function Player:get_distances(world)
 		end
 
 		if not hit_entity then
-			table.insert(ret, 0)
+			table.insert(ret, CONF.PLAYER_VISION_DISTANCE * CONF.ENEMY_SIZE)
 		end
 	end
-
-	assert(#ret == 16, "RET NOT LONG ENOUGH")
 
 	return ret
 end
@@ -256,10 +256,10 @@ function Enemy:get_rect()
 end
 
 function Enemy:collide(other, dx, dy, world)
-	if other.ENTITY_TYPE == "Enemy" then
-		self.x = self.x - dx
-		self.y = self.y - dy
-	end
+	-- if other.ENTITY_TYPE == "Enemy" then
+	-- 	self.x = self.x - dx
+	-- 	self.y = self.y - dy
+	-- end
 
 	if other.ENTITY_TYPE == "Player" then
 		other.alive = false
