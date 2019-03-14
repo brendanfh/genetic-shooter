@@ -42,9 +42,15 @@ local KEYMAP = {
 }
 
 return {
+	-- GENERAL PROPERTIES
+	LOAD_FILE = "";
+	SAVE_FILE = "./saved/POPULATION";
+
 	WINDOW_WIDTH = WINDOW_WIDTH;
 	WINDOW_HEIGHT = WINDOW_HEIGHT;
 	KEYS = KEYMAP;
+
+	-- COLOR PROPERTIES
 
 	BACK_COLOR = { 0.1, 0.1, 0.15 };
 	FONT_COLOR = { 1.0, 1.0, 1.0 };
@@ -54,15 +60,18 @@ return {
 	ENEMY_COLOR = { 1.0, 0.0, 0.0 };
 	BULLET_COLOR = { 0.6, 0.6, 1.0 };
 
+	-- BEHAVIOR PROPERTIES
+
 	PLAYER_VISION_SEGMENTS = 32;
 	PLAYER_VISION_DISTANCE = 20;
 
 	ENEMY_SIZE = 14;
 
-	MAX_NEURONS = 1024;
+	-- GENETIC PROPERTIES
 
-	-- How many of the genomes tested survive
+	MAX_NEURONS = 1024;
 	GENOME_THRESHOLD = 1 / 5;
+	POPULATION_SIZE = 100;
 
 	Starting_Weights_Chance = 0.25;
 	Starting_Connection_Chance = 2.0;
@@ -73,4 +82,11 @@ return {
 
 	Reset_Weight_Chance = 0.9;
 	Crossover_Chance = 0.75;
+
+	-- REWARD / PUNISHMENT PROPERTIES
+
+	POINTS_PER_KILL = 100;
+	POINTS_PER_ROUND_END = 1000;
+	POINTS_PER_BULLET = -1;
+	POINTS_PER_MOVEMENT = 1;
 }

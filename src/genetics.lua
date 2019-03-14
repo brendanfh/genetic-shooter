@@ -70,14 +70,14 @@ function Genome.new(inputs, outputs)
 	return o
 end
 
-function Genome:add_gene(from, to, weight)
+function Genome:add_gene(from, to, weight, innov)
 	if from > to then return end
 
 	local gene = Gene.new()
 	gene.weight = weight
 	gene.from = from
 	gene.to = to
-	gene.innovation = Get_Next_Innovation()
+	gene.innovation = innov or Get_Next_Innovation()
 
 	table.insert(self.genes, gene)
 end
@@ -414,7 +414,6 @@ function Population.new()
 		genomes = {};
 		genome_count = 0;
 		generation = 0;
-		max_innovations = 0;
 		current_genome = 0;
 		high_fitness = 0;
 		total_fitness = 0;
@@ -423,6 +422,10 @@ function Population.new()
 
 	setmetatable(o, Population_mt)
 	return o
+end
+
+function Population:create_empty_genome(ins, outs)
+	table.insert(self.genomes, Genome.new(ins, outs))
 end
 
 function Population:create_genomes(num, inputs, outputs)
@@ -526,8 +529,8 @@ function Population:training_step(inputs, output_func, _, ...)
 	end
 end
 
-function Population:evolve(_, _, generation_step, ...)
-	generation_step(self.avg_fitness, self.high_fitness, ...)
+function Population:evolve(_, _, generation_steps, ...)
+	generation_steps[1](self.avg_fitness, self.high_fitness, ...)
 	self:kill_worst()
 	self:mate()
 
@@ -535,6 +538,8 @@ function Population:evolve(_, _, generation_step, ...)
 	self.high_fitness = 0
 	self.avg_fitness = 0
 	self.total_fitness = 0
+
+	generation_steps[2](...)
 
 	return self.training_step
 end

@@ -29,8 +29,12 @@ function Trainer:initialize_training()
 		return self:after_inputs(...)
 	end
 
-	self.generation_step_func = function(...)
-		return self:generation_step(...)
+	self.pre_evolution_func = function(...)
+		return self:pre_evolution(...)
+	end
+
+	self.post_evolution_func = function(...)
+		return self:post_evolution(...)
 	end
 end
 
@@ -68,20 +72,23 @@ function Trainer:after_inputs(inputs, dt)
 
 	self.world:update(dt, self.input)
 
-	local fitness = math.sqrt(math.sqrDist(last_x, last_y, self.player.x, self.player.y))
+	local fitness = 0
 
-	fitness = fitness - (self.player.shot and 1 or 0)
+	local dist = math.sqrt(math.sqrDist(last_x, last_y, self.player.x, self.player.y))
+	fitness = fitness + dist * CONF.POINTS_PER_MOVEMENT
+
+	fitness = fitness + (self.player.shot and CONF.POINTS_PER_BULLET or 0)
 	self.player.shot = false
 
 	if self.player.kills ~= last_kills then
-		fitness = fitness + 400 * (self.player.kills - last_kills)
+		fitness = fitness + CONF.POINTS_PER_KILL * (self.player.kills - last_kills)
 	end
 
 	if not self.player.alive or self.world:get_count{ "Enemy" } == 0 then
 		self.world:kill_all{ "Bullet", "Enemy" }
 
 		if self.player.alive then
-			fitness = fitness + 2000
+			fitness = fitness + CONF.POINTS_PER_ROUND_END
 			self.world:next_round()
 		else
 			self.world:reset()
@@ -93,8 +100,11 @@ function Trainer:after_inputs(inputs, dt)
 	return fitness, self.player.alive
 end
 
-function Trainer:generation_step(avg, high, _)
-	print "PROCEEDING TO NEXT GENERATION"
+function Trainer:pre_evolution(_, _, _)
+end
+
+function Trainer:post_evolution(_)
+	self.population:save(CONF.SAVE_FILE)
 end
 
 function Trainer:update(dt)
@@ -105,7 +115,7 @@ function Trainer:update(dt)
 			self.population,
 			inputs,
 			self.after_inputs_func,
-			self.generation_step_func,
+			{ self.pre_evolution_func, self.post_evolution_func },
 			dt
 		)
 	end

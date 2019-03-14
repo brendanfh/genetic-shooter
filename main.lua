@@ -3,6 +3,7 @@ local CONF = require "conf"
 local world_mod = require "src.world"
 local Input = require "src.input"
 local Gen = require "src.genetics"
+require "src.data"
 local Trainer = (require "src.trainer").Trainer
 
 local World = world_mod.World
@@ -42,8 +43,12 @@ function love.load()
 
 	input = Input:new()
 
-	pop = Population.new()
-	pop:create_genomes(96, 16, 8)
+	if CONF.LOAD_FILE == "" then
+		pop = Population.new()
+		pop:create_genomes(CONF.POPULATION_SIZE, 16, 8)
+	else
+		pop = Population.load(CONF.LOAD_FILE)
+	end
 
 	trainer = Trainer.new(pop, world, input)
 	trainer:initialize_training()
@@ -60,7 +65,6 @@ end
 function love.keyreleased(key)
 	input:keyup(key)
 end
-
 
 function love.update(dt)
 	if love.keyboard.isDown "escape" then

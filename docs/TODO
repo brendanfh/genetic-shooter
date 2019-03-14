@@ -1,12 +1,10 @@
 Things to fix tonight...
 
-* Need to be able to save and load the generations
+\, Need to be able to save and load the generations
 
 \, main.lua has a lot of logic that can be split up
 	\, Should have a "Tester" class that encapsulates the updating and handling population growth
 	- Should have a Statistics class that calculates basic stats on a list of numbers
 
-- Way to "manually" play the game
-
 - Need to be able to train the AI without running the visuals
-	- Separate logic
+	\, Separate logic
