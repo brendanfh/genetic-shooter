@@ -22,7 +22,6 @@ function Input.new()
 	return o
 end
 
--- Ugly way of righting it but I don't care (right now at least... :P)
 function Input:keydown(key)
 	if     key == KEYS.MOVE_UP    then self.move_up    = true
 	elseif key == KEYS.MOVE_DOWN  then self.move_down  = true

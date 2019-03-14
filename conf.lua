@@ -1,6 +1,6 @@
 -- Window will be small since the graphics are not very important
-local WINDOW_WIDTH = 800
-local WINDOW_HEIGHT = 600
+local WINDOW_WIDTH = 1200
+local WINDOW_HEIGHT = 800
 
 function love.conf(t)
 	t.window.title = "Maching Learning Game"
@@ -46,8 +46,11 @@ return {
 	WINDOW_HEIGHT = WINDOW_HEIGHT;
 	KEYS = KEYMAP;
 
-	BACK_COLOR = { 0.8, 0.8, 0.8 };
-	PLAYER_COLOR = { 0.3, 0.3, 0.7 };
+	BACK_COLOR = { 0.1, 0.1, 0.15 };
+	FONT_COLOR = { 1.0, 1.0, 1.0 };
+
+	PLAYER_COLOR = { 0.7, 0.7, 0.96 };
+	PLAYER_VISION_COLOR = { 0.7, 0.7, 0.7 };
 	ENEMY_COLOR = { 1.0, 0.0, 0.0 };
 	BULLET_COLOR = { 0.6, 0.6, 1.0 };
 
@@ -57,4 +60,17 @@ return {
 	ENEMY_SIZE = 14;
 
 	MAX_NEURONS = 1024;
+
+	-- How many of the genomes tested survive
+	GENOME_THRESHOLD = 1 / 5;
+
+	Starting_Weights_Chance = 0.25;
+	Starting_Connection_Chance = 2.0;
+	Starting_Bias_Chance = 0.2;
+	Starting_Split_Chance = 0.5;
+	Starting_Enable_Chance = 0.2;
+	Starting_Disable_Chance = 0.4;
+
+	Reset_Weight_Chance = 0.9;
+	Crossover_Chance = 0.75;
 }

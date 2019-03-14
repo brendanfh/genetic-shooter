@@ -31,11 +31,14 @@ function Bullet:update(dt, world)
 	end
 end
 
-function Bullet:collide(other, dx, dy, world)
+function Bullet:collide(other, _, _, world)
 	if other.ENTITY_TYPE == "Enemy" then
 		other.alive = false
 		world:remove_entity(other)
 		world:remove_entity(self)
+
+		-- Reward the player a kill
+		world.player.kills = world.player.kills + 1
 	end
 end
 
@@ -80,14 +83,15 @@ Player.ENTITY_TYPE = "Player"
 
 function Player.new()
 	local o = {
-		x = CONF.WINDOW_WIDTH / 2;
-		y = CONF.WINDOW_HEIGHT / 2;
+		x = 400;
+		y = 300;
 		r = 20;
 		alive = true;
 		fire_cooldown = 0;
 
 		distances = {};
 		shot = false;
+		kills = 0;
 	}
 
 	setmetatable(o, Player_mt)
@@ -203,7 +207,7 @@ function Player:draw()
 	love.graphics.setColor(CONF.PLAYER_COLOR)
 	love.graphics.circle("fill", self.x, self.y, self.r)
 
-	love.graphics.setColor(0, 0, 0)
+	love.graphics.setColor(CONF.PLAYER_VISION_COLOR)
 	for i = 0, CONF.PLAYER_VISION_SEGMENTS - 1 do
 		local a = i * 2 * math.pi / CONF.PLAYER_VISION_SEGMENTS
 		local dx = math.cos(a)
@@ -217,7 +221,7 @@ function Player:draw()
 
 		if self.distances[i + 1] > 0 then
 			local d = self.distances[i + 1]
-			love.graphics.circle("fill", self.x + dx * d, self.y + dy * d, 5)
+			love.graphics.circle("fill", self.x + dx * d, self.y + dy * d, 8)
 		end
 	end
 end
@@ -295,6 +299,8 @@ function Wall:update(dt)
 end
 
 function Wall:draw()
+	love.graphics.setColor(0, 0, 0)
+	love.graphics.rectangle("fill", unpack(self:get_rect()))
 end
 
 function Wall:get_rect()
@@ -325,6 +331,7 @@ function World.new(player)
 		entities = {};
 
 		player = player;
+		round = 1;
 	}
 
 	setmetatable(o, World_mt)
@@ -339,6 +346,11 @@ function World:update(dt, input)
 	end
 
 	self.player:update(dt, self, input)
+
+	-- if self:get_count{ "Enemy" } == 0 and self.player.alive then
+	-- 	self:next_round()
+	-- 	self:spawn_enemies(self.round)
+	-- end
 end
 
 function World:add_entity(ent)
@@ -392,6 +404,59 @@ function World:move_entity(ent, dx, dy)
 			end
 		end
 	end
+end
+
+function World:get_count(types)
+	local cnt = 0
+	for _, v in ipairs(self.entities) do
+		if table.contains(types, v.ENTITY_TYPE) then
+			cnt = cnt + 1
+		end
+	end
+
+	return cnt
+end
+
+function World:kill_all(types)
+	local i = 0
+
+	-- Because we are deleting from the list as we go, we have to
+	-- do this iteratively
+	repeat
+		i = i + 1
+
+		if self.entities[i] ~= nil then
+			if table.contains(types, self.entities[i].ENTITY_TYPE) then
+				self:remove_entity(self.entities[i])
+				i = i - 1
+			end
+		end
+	until i == #self.entities
+end
+
+function World:spawn_enemies(count)
+	for _ = 1, count do
+		local vert = math.random(2) > 1
+		local tmp = math.random(2) > 1
+		local x = math.random(vert and 100 or 800) + (vert and (tmp and 600 or 0) or 0)
+
+		vert = not vert
+		tmp = math.random(2) > 1
+		local y = math.random(vert and 100 or 600) + (vert and (tmp and 400 or 0) or 0)
+
+		local enemy = Enemy.new(x, y)
+		self:add_entity(enemy)
+	end
+end
+
+function World:next_round()
+	self.round = self.round + 1
+end
+
+function World:reset()
+	self.round = 1
+	self.player.x = 400
+	self.player.y = 300
 end
 
 function World:draw()

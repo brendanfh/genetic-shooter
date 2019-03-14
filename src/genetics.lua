@@ -1,19 +1,6 @@
 local NN = require "src.neuralnet"
-local conf = require "conf"
+local CONF = require "conf"
 local NeuralNetwork = NN.NeuralNetwork
-
--- Globals
-local Starting_Weights_Chance = 0.25
-local Starting_Connection_Chance = 2.0
-local Starting_Bias_Chance = 0.2
-local Starting_Split_Chance = 0.5
-local Starting_Enable_Chance = 0.2
-local Starting_Disable_Chance = 0.4
-
-local Reset_Weight_Chance = 0.9
-local Crossover_Chance = 0.75
-
-local MAX_NEURONS = conf.MAX_NEURONS
 
 -- Need a global-ish innovation number, since that depends on the whole training, not just a single genome
 local Current_Innovation = 1
@@ -57,7 +44,6 @@ end
 
 -- Genome class --
 
-
 local Genome = {}
 local Genome_mt = { __index = Genome }
 
@@ -71,12 +57,12 @@ function Genome.new(inputs, outputs)
 		high_neuron = inputs + 1; -- Highest numbered neuron in the genome
 
 		mutations = { -- The different chances of mutating a particular part of the genome
-			["weights"] = Starting_Weights_Chance; -- Chance of changing the weights
-			["connection"] = Starting_Connection_Chance; -- Chance of changing the connections (add a gene)
-			["bias"] = Starting_Bias_Chance; -- Chance of connecting to the bias
-			["split"] = Starting_Split_Chance; -- Chance of splitting a gene and adding a neuron
-			["enable"] = Starting_Enable_Chance; -- Chance of enabling a gene
-			["disable"] = Starting_Disable_Chance; -- Chance of disablign a gene
+			["weights"] = CONF.Starting_Weights_Chance; -- Chance of changing the weights
+			["connection"] = CONF.Starting_Connection_Chance; -- Chance of changing the connections (add a gene)
+			["bias"] = CONF.Starting_Bias_Chance; -- Chance of connecting to the bias
+			["split"] = CONF.Starting_Split_Chance; -- Chance of splitting a gene and adding a neuron
+			["enable"] = CONF.Starting_Enable_Chance; -- Chance of enabling a gene
+			["disable"] = CONF.Starting_Disable_Chance; -- Chance of disablign a gene
 		}
 	}
 
@@ -152,7 +138,7 @@ function Genome:mutate_weights()
 	for i = 1, #self.genes do
 		local gene = self.genes[i]
 
-		if math.random() < Reset_Weight_Chance then
+		if math.random() < CONF.Reset_Weight_Chance then
 			gene.weight = gene.weight + math.random() * change * 2 - change -- (-change, change)
 		else
 			gene.weight = math.random() * 4 - 2 -- Randomly change it to be in (-2, 2)
@@ -182,7 +168,7 @@ function Genome:mutate_connections(connect_to_bias)
 	end
 
 	-- Output cant be input
-	if neuron1 >= MAX_NEURONS - self.num_outputs then
+	if neuron1 >= CONF.MAX_NEURONS - self.num_outputs then
 		return
 	end
 
@@ -348,7 +334,7 @@ function Genome:get_random_neuron(can_be_input)
 	end
 
 	for o = 1, self.num_outputs do
-		neurons[MAX_NEURONS - o] = true
+		neurons[CONF.MAX_NEURONS - o] = true
 	end
 
 	for i = 1, #genes do
@@ -426,7 +412,9 @@ local Population_mt = { __index = Population }
 function Population.new()
 	local o = {
 		genomes = {};
+		genome_count = 0;
 		generation = 0;
+		max_innovations = 0;
 		current_genome = 0;
 		high_fitness = 0;
 		total_fitness = 0;
@@ -439,6 +427,7 @@ end
 
 function Population:create_genomes(num, inputs, outputs)
 	local genomes = self.genomes
+	self.genome_count = num
 
 	for i = 1, num do
 		genomes[i] = Genome.new(inputs, outputs)
@@ -446,16 +435,18 @@ function Population:create_genomes(num, inputs, outputs)
 	end
 end
 
-function Population:breed_genome()
+function Population:breed_genome(max_genome)
 	local genomes = self.genomes
+	max_genome = max_genome or #genomes
+
 	local child
 
-	if math.random() < Crossover_Chance then
-		local g1 = genomes[math.random(1, #genomes)]
-		local g2 = genomes[math.random(1, #genomes)]
+	if math.random() < CONF.Crossover_Chance then
+		local g1 = genomes[math.random(1, max_genome)]
+		local g2 = genomes[math.random(1, max_genome)]
 		child = g1:crossover(g2)
 	else
-		local g = genomes[math.random(1, #genomes)]
+		local g = genomes[math.random(1, max_genome)]
 		child = g:copy()
 	end
 
@@ -470,7 +461,7 @@ function Population:kill_worst()
 		return a.fitness > b.fitness
 	end)
 
-	local count = math.floor(2 * #self.genomes / 3)
+	local count = math.floor(#self.genomes * (1 - CONF.GENOME_THRESHOLD))
 	for _ = 1, count do
 		table.remove(self.genomes) -- This removes the last (worst) genome
 	end
@@ -483,81 +474,79 @@ function Population:kill_worst()
 end
 
 function Population:mate()
-	local count = #self.genomes * 2
+	local start_count = #self.genomes
+	local count = self.genome_count - #self.genomes
 
-	-- Double the population size
 	for _ = 1, count do
-		table.insert(self.genomes, self:breed_genome())
+		table.insert(self.genomes, self:breed_genome(start_count))
 	end
-
 
 	self.generation = self.generation + 1
 end
 
-function Population:evolve()
-	local evolve_test, finish_evolve
-
-	-- First we need to calculate the fitnesses of every genome
-	self.current_genome = 0
-	function evolve_test(inputs, output_func, _, ...)
-		if self.current_genome == 0 then
-			self.current_genome = 1
-			self.genomes[self.current_genome]:create_network()
-		end
-
-		if self.current_genome <= #self.genomes then
-			-- Assumes genome has network generated
-			local genome = self.genomes[self.current_genome]
-			inputs[#inputs + 1] = 1 -- Bias neuron
-
-			genome.network:activate(inputs)
-
-			local outputs = genome.network:get_outputs()
-			local fitness_change, cont = output_func(outputs, ...)
-
-			genome.fitness = genome.fitness + fitness_change
-
-			if cont then
-				return evolve_test
-			else
-				if genome.fitness > self.high_fitness then
-					self.high_fitness = genome.fitness
-				end
-
-				self.total_fitness = self.total_fitness + genome.fitness
-				self.avg_fitness = self.total_fitness / self.current_genome
-
-				self.current_genome = self.current_genome + 1
-
-				if self.current_genome <= #self.genomes then
-					self.genomes[self.current_genome]:create_network()
-					return evolve_test
-				else
-					return finish_evolve
-				end
-			end
-		else
-			return finish_evolve
-		end
+function Population:training_step(inputs, output_func, _, ...)
+	if self.current_genome == 0 then
+		self.current_genome = 1
+		self.genomes[self.current_genome]:create_network()
 	end
 
+	if self.current_genome <= #self.genomes then
+		-- Assumes genome has network generated
+		local genome = self.genomes[self.current_genome]
+		inputs[#inputs + 1] = 1 -- Bias neuron
+
+		genome.network:activate(inputs)
+
+		local outputs = genome.network:get_outputs()
+		local fitness_change, cont = output_func(outputs, ...)
+
+		genome.fitness = genome.fitness + fitness_change
+
+		if cont then
+			return self.training_step
+		else
+			if genome.fitness > self.high_fitness then
+				self.high_fitness = genome.fitness
+			end
+
+			self.total_fitness = self.total_fitness + genome.fitness
+			self.avg_fitness = self.total_fitness / self.current_genome
+
+			self.current_genome = self.current_genome + 1
+
+			if self.current_genome <= #self.genomes then
+				self.genomes[self.current_genome]:create_network()
+				return self.training_step
+			else
+				return self.evolve
+			end
+		end
+	else
+		return self.evolve
+	end
+end
+
+function Population:evolve(_, _, generation_step, ...)
+	generation_step(self.avg_fitness, self.high_fitness, ...)
+	self:kill_worst()
+	self:mate()
+
+	self.current_genome = 0
+	self.high_fitness = 0
+	self.avg_fitness = 0
+	self.total_fitness = 0
+
+	return self.training_step
+end
+
+function Population:start_training()
+	-- First we need to calculate the fitnesses of every genome
 	-- Then we need to kill off the worst of them
 	-- Then we breed more
 	-- Rinse and repeat!
-	function finish_evolve(_, _, generation_step, ...)
-		generation_step(self.avg_fitness, self.high_fitness, ...)
 
-		self:kill_worst()
-		self:mate()
-
-		self.current_genome = 0
-		self.high_fitness = 0
-		self.avg_fitness = 0
-		self.total_fitness = 0
-		return evolve_test
-	end
-
-	return evolve_test
+	self.current_genome = 0
+	return self.training_step
 end
 
 return {

@@ -1,5 +1,4 @@
-local conf = require "conf"
-local MAX_NEURONS = conf.MAX_NEURONS
+local CONF = require "conf"
 
 -- Simple neural network implementation (perceptron)
 
@@ -37,7 +36,7 @@ function NeuralNetwork.new(num_inputs, num_outputs)
 
 	-- num_inputs + 1 to num_inputs + num_outputs are output nodes
 	for i = 1, num_outputs do
-		o.neurons[MAX_NEURONS - i] = Neuron.new(600, (i - 1) * 32)
+		o.neurons[CONF.MAX_NEURONS - i] = Neuron.new(600, (i - 1) * 32)
 	end
 
 	setmetatable(o, NeuralNetwork_mt)
@@ -48,7 +47,6 @@ function NeuralNetwork:add_connection(from, to, weight, id)
 	local neurons = self.neurons
 
 	if type(from) == "table" then
-		assert(from.to ~= from.from, "NEURON GOING TO ITSELF")
 		table.insert(neurons[from.to].inputs, from)
 	else
 		table.insert(neurons[to].inputs, {
@@ -61,7 +59,7 @@ function NeuralNetwork:add_connection(from, to, weight, id)
 end
 
 function NeuralNetwork:add_neuron()
-	self.neurons[self.next_neuron] = Neuron.new(math.random(500) + 100, math.random(400) + 50)
+	self.neurons[self.next_neuron] = Neuron.new(math.random(400) + 100, math.random(400) + 50)
 	self.next_neuron = self.next_neuron + 1
 	return self.next_neuron - 1
 end
@@ -92,7 +90,6 @@ function NeuralNetwork:activate(inputs)
 		end
 	end
 
-	-- Iterate backwards since the hidden nodes are going to be at the end of the array
 	for i, _ in pairs(ns) do
 		if ns[i].dirty then
 			self:activate_neuron(i)
@@ -128,7 +125,7 @@ function NeuralNetwork:get_outputs()
 	local ret = {}
 
 	for i = 1, self.num_outputs do
-		ret[i] = self.neurons[MAX_NEURONS - i].value
+		ret[i] = self.neurons[CONF.MAX_NEURONS - i].value
 	end
 
 	return ret

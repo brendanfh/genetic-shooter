@@ -3,6 +3,7 @@ local CONF = require "conf"
 local world_mod = require "src.world"
 local Input = require "src.input"
 local Gen = require "src.genetics"
+local Trainer = (require "src.trainer").Trainer
 
 local World = world_mod.World
 local Enemy = world_mod.Enemy
@@ -12,16 +13,19 @@ local Population = Gen.Population
 local world, player
 local input
 local pop
-local pop_update
+local trainer
 
 local update_speed = 30
 
+local ui_font
 local fitness_font
 
 local stored_fitnesses = {}
 
 local enemies = {}
 function love.load()
+	math.randomseed(os.time())
+
 	world, player = World.new()
 	local enemy = Enemy.new(0, 0)
 	table.insert(enemies, enemy)
@@ -40,10 +44,13 @@ function love.load()
 
 	pop = Population.new()
 	pop:create_genomes(96, 16, 8)
-	pop_update = pop:evolve()
+
+	trainer = Trainer.new(pop, world, input)
+	trainer:initialize_training()
 
 	love.graphics.setBackgroundColor(CONF.BACK_COLOR)
-	fitness_font = love.graphics.newFont(24)
+	ui_font = love.graphics.newFont(24)
+	fitness_font = love.graphics.newFont(32)
 end
 
 function love.keypressed(key)
@@ -54,70 +61,6 @@ function love.keyreleased(key)
 	input:keyup(key)
 end
 
-local function get_random_pos()
-	local x = math.random(100) + math.random(100) + 600 * (math.random(2) - 1)
-	local y = math.random(100) + math.random(100) + 500 * (math.random(2) - 1)
-	return x, y
-end
-
-local function network_input(ins, dt)
-	player.alive = true
-	if ins[1] > 0.35 then input:keydown("w") else input:keyup("w") end
-	if ins[2] > 0.35 then input:keydown("s") else input:keyup("s") end
-	if ins[3] > 0.35 then input:keydown("a") else input:keyup("a") end
-	if ins[4] > 0.35 then input:keydown("d") else input:keyup("d") end
-	if ins[5] > 0.35 then input:keydown("left") else input:keyup("left") end
-	if ins[6] > 0.35 then input:keydown("right") else input:keyup("right") end
-	if ins[7] > 0.35 then input:keydown("up") else input:keyup("up") end
-	if ins[8] > 0.35 then input:keydown("down") else input:keyup("down") end
-
-	local last_x = player.x
-	local last_y = player.y
-
-	world:update(dt, input)
-
-	local fitness = math.sqrt(math.sqrDist(last_x, last_y, player.x, player.y))
-	fitness = fitness - (player.shot and 1 or 0)
-
-	local enemies_alive = 0
-	for _, v in ipairs(enemies) do
-		if v.alive then
-			enemies_alive = enemies_alive + 1
-		else
-			if not v.__tagged then
-				v.__tagged = true
-				fitness = fitness + 400
-			end
-		end
-	end
-
-	if not player.alive or enemies_alive == 0 then
-		for _, v in ipairs(enemies) do
-			world:remove_entity(v)
-		end
-
-		enemies = {}
-
-		for _ = 1, math.ceil((pop.generation + 1) / 10) do
-			local enemy = Enemy.new(get_random_pos())
-			world:add_entity(enemy)
-			table.insert(enemies, enemy)
-		end
-
-		if player.alive then
-			fitness = fitness + 2000
-		else
-			player.x = 400
-			player.y = 300
-		end
-	end
-
-	return fitness, player.alive
-end
-
-local function generation_step(avg_fitness, _, _)
-	table.insert(stored_fitnesses, avg_fitness)
-end
 
 function love.update(dt)
 	if love.keyboard.isDown "escape" then
@@ -125,33 +68,15 @@ function love.update(dt)
 	end
 
 	if love.keyboard.isDown "z" then
-		update_speed = update_speed - 1
-		if update_speed < 1 then
-			update_speed = 1
-		end
+		trainer:change_speed(-1)
 	end
 
 	if love.keyboard.isDown "x" then
-		update_speed = update_speed + 1
-		if update_speed > 60 then
-			update_speed = 60
-		end
+		trainer:change_speed(1)
 	end
 
-	for _ = 1, update_speed do
-		local dists = player:get_distances(world)
-
-		local inputs = {}
-		for i = 1, 16 do
-			local v1 = dists[i * 2]
-			local v2 = dists[(i * 2 + 1) % 32]
-			local v3 = dists[(i * 2 - 1) % 32]
-
-			inputs[i] = 1 - ((0.5 * v1 + 0.25 * v2 + 0.25 * v3) / (CONF.ENEMY_SIZE * CONF.PLAYER_VISION_DISTANCE))
-		end
-
-		pop_update = pop_update(inputs, network_input, generation_step, dt)
-	end
+	trainer:update(dt)
+	--world:update(dt, input)
 end
 
 local function plot_fitness(x, y, scale)
@@ -160,13 +85,13 @@ local function plot_fitness(x, y, scale)
 	love.graphics.scale(scale, scale)
 
 	love.graphics.setColor(0, 0, 0, 0.4)
-	love.graphics.rectangle("fill", -20, -20, 440, 240)
+	love.graphics.rectangle("fill", -20, -20, 680, 340)
 
 	love.graphics.setFont(fitness_font)
-	love.graphics.setColor(1, 1, 1)
+	love.graphics.setColor(CONF.FONT_COLOR)
 
-	love.graphics.printf("Average fitness: " .. math.floor(pop.avg_fitness), 0, 0, 400, "left")
-	love.graphics.printf("Highest fitness: " .. math.floor(pop.high_fitness), 0, 20, 400, "left")
+	love.graphics.printf("Average fitness: " .. math.floor(pop.avg_fitness), 0, 0, 640, "left")
+	love.graphics.printf("Highest fitness: " .. math.floor(pop.high_fitness), 0, 32, 640, "left")
 
 	local highest = 0
 	for _, v in ipairs(stored_fitnesses) do
@@ -175,14 +100,14 @@ local function plot_fitness(x, y, scale)
 		end
 	end
 
-	local width = 400 / (#stored_fitnesses)
+	local width = 640 / (#stored_fitnesses)
 
 	love.graphics.setColor(0, 0, 1)
 	for i, v in ipairs(stored_fitnesses) do
 		if v < 0 then
 			v = 0
 		end
-		love.graphics.circle("fill", (i - 1) * width, 200 - v * 100 / highest, 8)
+		love.graphics.circle("fill", (i - 1) * width, 300 - v * 200 / highest, 8)
 	end
 
 	love.graphics.pop()
@@ -198,9 +123,19 @@ local function draw_network(net, x, y, scale)
 	love.graphics.setColor(0, 0, 0, 0.4)
 	love.graphics.rectangle("fill", -20, -20, 680, 600)
 
-	love.graphics.setColor(1, 1, 1)
-
 	for _, v in pairs(net.neurons) do
+		local c = v.value
+		local r = c < 0 and c or 0
+		local b = c > 0 and c or 0
+		local g = 0
+
+		if v.value == 0 then
+			r = 0.3
+			g = 0.3
+			b = 0.3
+		end
+
+		love.graphics.setColor(r, g, b)
 		love.graphics.rectangle("fill", v.x, v.y, 24, 24)
 	end
 
@@ -219,6 +154,11 @@ local function draw_network(net, x, y, scale)
 				col = { 0, 0, 1 }
 			end
 
+			local mag = math.abs(other.value)
+			col[1] = col[1] * mag
+			col[2] = col[2] * mag
+			col[3] = col[3] * mag
+
 			love.graphics.setColor(col)
 			love.graphics.setLineWidth(math.sigmoid(conn.weight) * 2)
 			love.graphics.line(x1, y1, x2, y2)
@@ -230,17 +170,20 @@ local function draw_network(net, x, y, scale)
 end
 
 function love.draw()
+	love.graphics.setScissor(0, 0, 820, 620)
 	world:draw()
+	love.graphics.setScissor()
 
-	love.graphics.setColor(0, 0, 0)
-	love.graphics.printf(tostring(love.timer.getFPS()) .. " FPS", 0, 0, 800, "left")
-	love.graphics.printf("Generation: " .. pop.generation, 0, 32, 800, "left")
-	love.graphics.printf("Genome: " .. pop.current_genome, 0, 64, 800, "left")
+	love.graphics.setColor(CONF.FONT_COLOR)
+	love.graphics.setFont(ui_font)
+	love.graphics.printf(tostring(love.timer.getFPS()) .. " FPS", 16, 640, 800, "left")
+	love.graphics.printf("Generation: " .. pop.generation, 16, 640 + 32, 800, "left")
+	love.graphics.printf("Genome: " .. pop.current_genome, 16, 640 + 64, 800, "left")
 	if pop.genomes[pop.current_genome] ~= nil then
-		love.graphics.printf("Fitness: " .. math.floor(pop.genomes[pop.current_genome].fitness), 0, 96, 800, "left")
+		love.graphics.printf("Fitness: " .. math.floor(pop.genomes[pop.current_genome].fitness), 16, 640 + 96, 800, "left")
 
-		draw_network(pop.genomes[pop.current_genome].network, 580, 0, 1 / 3)
+		draw_network(pop.genomes[pop.current_genome].network, 1200 - 350, 32, 1 / 2)
 	end
 
-	plot_fitness(250, 0, 3 / 4)
+	--plot_fitness(1200 - 350, 352, 1 / 2)
 end
