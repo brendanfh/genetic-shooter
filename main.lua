@@ -5,6 +5,7 @@ local Input = require "src.input"
 local Gen = require "src.genetics"
 require "src.data"
 local Trainer = (require "src.trainer").Trainer
+local Stats = (require "src.stats").Stats
 
 local World = world_mod.World
 local Wall = world_mod.Wall
@@ -14,11 +15,11 @@ local world
 local input
 local pop
 local trainer
+local pop_stats
+local gen_stats
 
 local ui_font
 local fitness_font
-
-local stored_fitnesses = {}
 
 function love.load()
 	math.randomseed(os.time())
@@ -42,6 +43,9 @@ function love.load()
 	else
 		pop = Population.load(CONF.LOAD_FILE)
 	end
+
+	pop_stats = Stats.new()
+	gen_stats = Stats.new()
 
 	trainer = Trainer.new(pop, world, input)
 	trainer:initialize_training()
@@ -72,7 +76,7 @@ function love.update(dt)
 		trainer:change_speed(1)
 	end
 
-	trainer:update(dt)
+	trainer:update(dt, pop_stats, gen_stats)
 	--world:update(dt, input)
 end
 
@@ -90,21 +94,34 @@ local function plot_fitness(x, y, scale)
 	love.graphics.printf("Average fitness: " .. math.floor(pop.avg_fitness), 0, 0, 640, "left")
 	love.graphics.printf("Highest fitness: " .. math.floor(pop.high_fitness), 0, 32, 640, "left")
 
-	local highest = 0
-	for _, v in ipairs(stored_fitnesses) do
-		if v > highest then
-			highest = v
-		end
-	end
-
-	local width = 640 / (#stored_fitnesses)
+	local points = pop_stats:get_points(0, 120, 640, 200)
 
 	love.graphics.setColor(0, 0, 1)
-	for i, v in ipairs(stored_fitnesses) do
-		if v < 0 then
-			v = 0
-		end
-		love.graphics.circle("fill", (i - 1) * width, 300 - v * 200 / highest, 8)
+	for _, v in ipairs(points) do
+		love.graphics.circle("fill", v[1], v[2], 8)
+	end
+
+	love.graphics.pop()
+end
+
+local function plot_generation(x, y, scale)
+	love.graphics.push()
+	love.graphics.translate(x, y)
+	love.graphics.scale(scale, scale)
+
+	love.graphics.setColor(0, 0, 0, 0.4)
+	love.graphics.rectangle("fill", -20, -20, 680, 340)
+
+	love.graphics.setFont(fitness_font)
+	love.graphics.setColor(CONF.FONT_COLOR)
+
+	love.graphics.printf("Fitness over Genome", 0, 0, 640, "left")
+
+	local points = gen_stats:get_points(0, 60, 640, 260)
+
+	love.graphics.setColor(1, 0, 0)
+	for _, v in ipairs(points) do
+		love.graphics.circle("fill", v[1], v[2], 8)
 	end
 
 	love.graphics.pop()
@@ -182,5 +199,6 @@ function love.draw()
 		draw_network(pop.genomes[pop.current_genome].network, 1200 - 350, 32, 1 / 2)
 	end
 
-	--plot_fitness(1200 - 350, 352, 1 / 2)
+	plot_fitness(1200 - 350, 352, 1 / 2)
+	plot_generation(1200 - 350, 600, 1 / 2)
 end

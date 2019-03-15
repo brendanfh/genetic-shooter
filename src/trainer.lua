@@ -55,7 +55,7 @@ function Trainer:get_inputs()
 	return inputs
 end
 
-function Trainer:after_inputs(inputs, dt)
+function Trainer:after_inputs(inputs, dt, _, gen_stats)
 	-- Make sure the player is considered alive at the start of every turn
 	self.player.alive = true
 
@@ -93,6 +93,7 @@ function Trainer:after_inputs(inputs, dt)
 			fitness = fitness + CONF.POINTS_PER_ROUND_END
 			self.world:next_round()
 		else
+			gen_stats:add_point(self.population.genomes[self.population.current_genome].fitness)
 			self.world:reset()
 		end
 
@@ -102,18 +103,21 @@ function Trainer:after_inputs(inputs, dt)
 	return fitness, self.player.alive
 end
 
-function Trainer:pre_evolution(avg, high, _)
+function Trainer:pre_evolution(avg, high, _, stats, _)
+	stats:add_point(avg)
+	self.population:save(CONF.SAVE_FILE)
+
 	print("FINISHED GENERATION: " .. self.population.generation .. " | Stats: ")
 	print("        Average: " .. tostring(avg))
 	print("        Highest: " .. tostring(high))
 	print("--------------------------------------------------------------------")
 end
 
-function Trainer:post_evolution(_)
-	self.population:save(CONF.SAVE_FILE)
+function Trainer:post_evolution(_, _, gen_stats)
+	gen_stats:clear()
 end
 
-function Trainer:update(dt)
+function Trainer:update(...)
 	local inputs = self:get_inputs()
 
 	for _ = 1, self.speed do
@@ -122,7 +126,7 @@ function Trainer:update(dt)
 			inputs,
 			self.after_inputs_func,
 			{ self.pre_evolution_func, self.post_evolution_func },
-			dt
+			...
 		)
 	end
 end

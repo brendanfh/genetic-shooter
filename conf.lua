@@ -44,8 +44,8 @@ local KEYMAP = {
 
 return {
 	-- GENERAL PROPERTIES
-	LOAD_FILE = "./saved/TERM_1_GEN_14";
-	SAVE_FILE = "./saved/TERM";
+	LOAD_FILE = "";
+	SAVE_FILE = "./saved/DELETE";
 
 	WINDOW_WIDTH = WINDOW_WIDTH;
 	WINDOW_HEIGHT = WINDOW_HEIGHT;
