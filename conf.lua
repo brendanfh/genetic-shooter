@@ -2,6 +2,7 @@
 local WINDOW_WIDTH = 1200
 local WINDOW_HEIGHT = 800
 
+local love = love or {}
 function love.conf(t)
 	t.window.title = "Maching Learning Game"
 
@@ -43,8 +44,8 @@ local KEYMAP = {
 
 return {
 	-- GENERAL PROPERTIES
-	LOAD_FILE = "";
-	SAVE_FILE = "./saved/POPULATION";
+	LOAD_FILE = "./saved/TERM_1_GEN_14";
+	SAVE_FILE = "./saved/TERM";
 
 	WINDOW_WIDTH = WINDOW_WIDTH;
 	WINDOW_HEIGHT = WINDOW_HEIGHT;

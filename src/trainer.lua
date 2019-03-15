@@ -23,6 +23,8 @@ function Trainer.new(population, world, input)
 end
 
 function Trainer:initialize_training()
+	self.world:spawn_enemies(1)
+
 	self.population_step = self.population:start_training()
 
 	self.after_inputs_func = function(...)
@@ -100,7 +102,11 @@ function Trainer:after_inputs(inputs, dt)
 	return fitness, self.player.alive
 end
 
-function Trainer:pre_evolution(_, _, _)
+function Trainer:pre_evolution(avg, high, _)
+	print("FINISHED GENERATION: " .. self.population.generation .. " | Stats: ")
+	print("        Average: " .. tostring(avg))
+	print("        Highest: " .. tostring(high))
+	print("--------------------------------------------------------------------")
 end
 
 function Trainer:post_evolution(_)

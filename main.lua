@@ -7,30 +7,23 @@ require "src.data"
 local Trainer = (require "src.trainer").Trainer
 
 local World = world_mod.World
-local Enemy = world_mod.Enemy
 local Wall = world_mod.Wall
 local Population = Gen.Population
 
-local world, player
+local world
 local input
 local pop
 local trainer
-
-local update_speed = 30
 
 local ui_font
 local fitness_font
 
 local stored_fitnesses = {}
 
-local enemies = {}
 function love.load()
 	math.randomseed(os.time())
 
-	world, player = World.new()
-	local enemy = Enemy.new(0, 0)
-	table.insert(enemies, enemy)
-	world:add_entity(enemy)
+	world = World.new()
 
 	local wall1 = Wall.new(-20, -20, 840, 20)
 	local wall2 = Wall.new(-20, 600, 840, 20)
