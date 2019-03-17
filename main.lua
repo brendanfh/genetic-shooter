@@ -139,7 +139,7 @@ local function draw_network(net, x, y, scale)
 
 	for _, v in pairs(net.neurons) do
 		local c = v.value
-		local r = c < 0 and c or 0
+		local r = c < 0 and -c or 0
 		local b = c > 0 and c or 0
 		local g = 0
 
@@ -164,7 +164,7 @@ local function draw_network(net, x, y, scale)
 			local y2 = other.y + 12
 
 			local col = { 1, 0, 0 }
-			if conn.weight > 0 then
+			if conn.weight * other.value> 0 then
 				col = { 0, 0, 1 }
 			end
 

@@ -85,7 +85,7 @@ function Stats:get_points(x, y, w, h)
 	local points = {}
 
 	for i, v in ipairs(self.data) do
-		table.insert(points, { (i - 1) * delta + x, low - h * (v / self.rng) })
+		table.insert(points, { (i - 1) * delta + x, low - h * ((v - self.min) / self.rng) })
 	end
 
 	return points

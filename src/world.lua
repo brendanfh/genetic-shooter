@@ -14,7 +14,7 @@ function Bullet.new(x, y, vx, vy)
 		y = y;
 		vx = vx;
 		vy = vy;
-		life = 80;
+		life = 1.5;
 		alive = true;
 	}
 
@@ -25,7 +25,7 @@ end
 function Bullet:update(dt, world)
 	world:move_entity(self, self.vx * dt, self.vy * dt)
 
-	self.life = self.life - 1
+	self.life = self.life - dt
 	if self.life <= 0 then
 		world:remove_entity(self)
 	end
@@ -102,7 +102,7 @@ function Player:update(dt, world, input)
 	local dx = 0
 	local dy = 0
 
-	local SPEED = 150
+	local SPEED = CONF.PLAYER_SPEED
 
 	if input.move_up    then dy = dy - SPEED end
 	if input.move_down  then dy = dy + SPEED end
@@ -123,7 +123,7 @@ function Player:update(dt, world, input)
 		if input.fire_right then firex = firex + 1 end
 
 		if firex ~= 0 or firey ~= 0 then
-			self.fire_cooldown = 6
+			self.fire_cooldown = .1
 
 			local d = math.sqrt(math.sqrDist(0, 0, firex, firey))
 			firex = FIRE_SPEED * firex / d
@@ -132,7 +132,7 @@ function Player:update(dt, world, input)
 			self:fire(firex, firey, world)
 		end
 	else
-		self.fire_cooldown = self.fire_cooldown - 1
+		self.fire_cooldown = self.fire_cooldown - dt
 	end
 
 	self.distances = self:get_distances(world)
@@ -171,7 +171,7 @@ function Player:get_distances(world)
 			local ty = self.y + dy * j
 
 			for _, e in ipairs(world.entities) do
-				if e.ENTITY_TYPE == "Enemy" and math.rectcontains(e:get_rect(), tx, ty) then
+				if (e.ENTITY_TYPE == "Enemy" or e.ENTITY_TYPE == "Wall") and math.rectcontains(e:get_rect(), tx, ty) then
 					local ent_rect = e:get_rect()
 
 					local toggle = false
@@ -188,7 +188,13 @@ function Player:get_distances(world)
 						end
 					end
 
-					table.insert(ret, math.sqrt(math.sqrDist(self.x, self.y, tx, ty)))
+					local d = math.sqrt(math.sqrDist(self.x, self.y, tx, ty))
+
+					if e.ENTITY_TYPE == "Wall" then
+						d = -d
+					end
+
+					table.insert(ret, d)
 					hit_entity = true
 					break
 				end
@@ -219,8 +225,8 @@ function Player:draw()
 			self.y + dy * CONF.PLAYER_VISION_DISTANCE * CONF.ENEMY_SIZE
 		)
 
-		if self.distances[i + 1] > 0 then
-			local d = self.distances[i + 1]
+		if math.abs(self.distances[i + 1]) > 0 then
+			local d = math.abs(self.distances[i + 1])
 			love.graphics.circle("fill", self.x + dx * d, self.y + dy * d, 8)
 		end
 	end
@@ -251,7 +257,7 @@ function Enemy:update(dt, world)
 	local dx = math.cos(a)
 	local dy = math.sin(a)
 
-	local SPEED = 80
+	local SPEED = CONF.ENEMY_SPEED
 	world:move_entity(self, dx * dt * SPEED, dy * dt * SPEED)
 end
 
@@ -436,13 +442,21 @@ end
 
 function World:spawn_enemies(count)
 	for _ = 1, count do
-		local vert = math.random(2) > 1
-		local tmp = math.random(2) > 1
-		local x = math.random(vert and 100 or 800) + (vert and (tmp and 600 or 0) or 0)
+		local found = false
+		local x, y
+		repeat
+			local vert = math.random(2) > 1
+			local tmp = math.random(2) > 1
+			x = math.random(vert and 100 or 800) + (vert and (tmp and 600 or 0) or 0)
 
-		vert = not vert
-		tmp = math.random(2) > 1
-		local y = math.random(vert and 100 or 600) + (vert and (tmp and 400 or 0) or 0)
+			vert = not vert
+			tmp = math.random(2) > 1
+			y = math.random(vert and 100 or 600) + (vert and (tmp and 400 or 0) or 0)
+
+			if math.sqrDist(self.player.x, self.player.y, x, y) > 80 * 80 then
+				found = true
+			end
+		until found
 
 		local enemy = Enemy.new(x, y)
 		self:add_entity(enemy)

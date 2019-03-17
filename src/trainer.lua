@@ -43,13 +43,22 @@ end
 function Trainer:get_inputs()
 	local dists = self.player:get_distances(self.world)
 
-	local inputs = {}
-	for i = 1, 16 do
-		local v1 = dists[i * 2]
-		local v2 = dists[(i * 2 + 1) % 32]
-		local v3 = dists[(i * 2 - 1) % 32]
+	local DIST = CONF.ENEMY_SIZE * CONF.PLAYER_VISION_DISTANCE
 
-		inputs[i] = 1 - ((0.5 * v1 + 0.25 * v2 + 0.25 * v3) / (CONF.ENEMY_SIZE * CONF.PLAYER_VISION_DISTANCE))
+	local inputs = {}
+	for i = 0, 15 do
+		local v1 = dists[i * 2 + 1] / DIST
+		local v2 = dists[((i * 2 + 1) % 32) + 1] / DIST
+		local v3 = dists[((i * 2 - 1) % 32) + 1] / DIST
+
+		if v1 > 0 then v1 = 1 - v1 end
+		if v1 < 0 then v1 = -1 - v1 end
+		if v2 > 0 then v2 = 1 - v2 end
+		if v2 < 0 then v2 = -1 - v2 end
+		if v3 > 0 then v3 = 1 - v3 end
+		if v3 < 0 then v3 = -1 - v3 end
+
+		inputs[i + 1] = 0.5 * v1 + 0.25 * v2 + 0.25 * v3
 	end
 
 	return inputs
@@ -118,9 +127,9 @@ function Trainer:post_evolution(_, _, gen_stats)
 end
 
 function Trainer:update(...)
-	local inputs = self:get_inputs()
-
 	for _ = 1, self.speed do
+		local inputs = self:get_inputs()
+
 		self.population_step = self.population_step(
 			self.population,
 			inputs,
