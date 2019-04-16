@@ -1,4 +1,4 @@
-# Game Title to be determined
+# Genetic Shooter
 
 # Purpose
 This is a simple game written in **Lua** using the **Love2D** game framework.
@@ -9,9 +9,10 @@ This game was designed to be very simple because it will serve as a platform for
 
 # Progress on the project
 The following are a simple checklist of things yet to be done on the project:
-* \[ \] Implement player movement
-* \[ \] Implement enemies
-* \[ \] Implement health and losing
-* \[ \] Implement systems to be used by neural network (sightline vision, etc.)
-* \[ \] Implement some kind of neural network
+* \[X\] Implement player movement
+* \[X\] Implement enemies
+* \[X\] Implement health and losing
+* \[X\] Implement systems to be used by neural network (sightline vision, etc.)
+* \[X\] Implement some kind of neural network
+* \[X\] Implement genetic algorithm
 * \[ \] Write more tasks to do (this will never be checked)
